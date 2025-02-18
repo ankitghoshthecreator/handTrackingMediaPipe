@@ -26,7 +26,11 @@ while True:
     if result.multi_hand_landmarks:
         for handLms in result.multi_hand_landmarks:
             for id, lms in enumerate(handLms.landmark):
-                print(lms, id)
+                print(id, lms)
+                h, w, c= img.shape
+                cx, cy= int(lms.x*w), int(lms.y*h)
+                #if id==4:
+                #   cv2.circle(img, (cx, cy), 15, (255,0,255), cv2.FILLED)
 
             mpDraw.draw_landmarks(img, handLms, mpHands.HAND_CONNECTIONS)
 
