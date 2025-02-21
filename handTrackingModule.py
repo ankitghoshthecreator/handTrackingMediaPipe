@@ -1,56 +1,62 @@
-import cv2     #opencv module
-import mediapipe as mp     #google media pipe for hand tracking
-import time   #check the frame rate
+import cv2  # OpenCV module
+import mediapipe as mp  # Google MediaPipe for hand tracking
+import time  # Check the frame rate
+
 print("hand tracking")
 
 
-class handDetectro():
-    def __init__(self, mode=False, maxHands=2, detectionConf=.5, trackingConf=0.5):
-        self.mode= mode
-        self.maxHands=maxHands
-        self.detectionConf=detectionConf
-        self.trackingConf=trackingConf
+class HandDetector:
+    def __init__(self, mode=False, maxHands=2, detectionConf=0.5, trackingConf=0.5):
+        self.mode = mode
+        self.maxHands = maxHands
+        self.detectionConf = detectionConf
+        self.trackingConf = trackingConf
 
         self.mpHands = mp.solutions.hands
-        self.hands = self.mpHands.Hands(self.mode, self.maxHands, self.detectionConf,self.trackingConf)
-        self. mpDraw = mp.solutions.drawing_utils
+        self.hands = self.mpHands.Hands(
+            static_image_mode=self.mode,
+            max_num_hands=self.maxHands,
+            min_detection_confidence=self.detectionConf,
+            min_tracking_confidence=self.trackingConf
+        )
+        self.mpDraw = mp.solutions.drawing_utils
 
-
-
-    def findHands(self, img):
+    def findHands(self, img, draw=True):
         imgRGB = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        result = self.hands.process(imgRGB)
+        results = self.hands.process(imgRGB)
 
-        # print(result.multi_hand_landmarks)
-
-        if result.multi_hand_landmarks:
-            for handLms in result.multi_hand_landmarks:
-                for id, lms in enumerate(handLms.landmark):
-                    print(id, lms)
-                    h, w, c = img.shape
-                    cx, cy = int(lms.x * w), int(lms.y * h)
-                # if id==4:
-                #   cv2.circle(img, (cx, cy), 15, (255,0,255), cv2.FILLED)
-
-                self.mpDraw.draw_landmarks(img, handLms, self.mpHands.HAND_CONNECTIONS)
-
+        if results.multi_hand_landmarks:
+            for handLms in results.multi_hand_landmarks:
+                if draw:
+                    self.mpDraw.draw_landmarks(img, handLms, self.mpHands.HAND_CONNECTIONS)
+        return img
 
 
 def main():
     pTime = 0
-    cTime = 0
     cap = cv2.VideoCapture(0)
 
+    detector = HandDetector()
+
     while True:
-        success, img = cap.read()  # this will produce the frames
+        success, img = cap.read()
+        if not success:
+            break
+
+        img = detector.findHands(img)
+
         cTime = time.time()
-        fps = 1 / (cTime - pTime)
+        fps = 1 / (cTime - pTime) if (cTime - pTime) > 0 else 0
         pTime = cTime
 
-        cv2.putText(img, str(int(fps)), (80, 100), cv2.FONT_HERSHEY_DUPLEX, 4, (255, 255, 255))
+        cv2.putText(img, f'FPS: {int(fps)}', (10, 70), cv2.FONT_HERSHEY_DUPLEX, 1, (255, 255, 255), 2)
 
         cv2.imshow("Image", img)
-        cv2.waitKey(1)
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+
+    cap.release()
+    cv2.destroyAllWindows()
 
 
 if __name__ == "__main__":
